@@ -52,6 +52,8 @@ module WeightedShuffle
       @current = false
       @pos = 0
       @length = 0
+      @adding = false
+      @removing = false
       begin
         @xc = Xmms::Client::Async.new('PLaylistClient').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
@@ -137,22 +139,16 @@ module WeightedShuffle
     end
 
     def set_length new_length
+      debug new_length
       @length = new_length
-      if @length - @pos < config.upcoming then
-        rand_song do |ids|
-          unless ids.empty?
-            playlist.add_entry(ids[0]) do |res|
-              true
-            end
-          end
-        end
-      end
+      may_add_song
     end
 
     def set_pos new_pos
+      debug new_pos
       @pos = new_pos || 0
-      if @pos > config.history then
-      end
+      may_add_song
+      may_remove_song
     end
 
     def rand_colls
@@ -172,6 +168,33 @@ module WeightedShuffle
       coll = rand_colls()
       num = rand(coll.size)
       xc.coll_query_ids(coll.coll, ["id"], num, 1, &block)
+    end
+
+    def may_add_song
+      unless @adding or @length - @pos >= config.upcoming
+        @adding = true
+        rand_song do |ids|
+          unless ids.empty?
+            playlist.add_entry(ids[0]) do |res|
+              @adding = false
+              true
+            end
+          else
+            @adding = false
+          end
+          true
+        end
+      end
+    end
+
+    def may_remove_song
+      if not @removing and @pos > config.history then
+        @removing = true
+        playlist.remove_entry(1) do |res|
+          @removing = false
+          false
+        end
+      end
     end
 
     def run()
