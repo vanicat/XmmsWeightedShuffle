@@ -39,11 +39,13 @@ module WeightedShuffle
   end
 
   class Client
-    attr_reader :xc, :colls, :config
+    attr_reader :xc, :colls, :config, :length, :pos, :playlist
 
     def initialize(config)
       @config = config
       @current = false
+      @pos = 0
+      @length = 0
       begin
         @xc = Xmms::Client::Async.new('PLaylistClient').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
@@ -70,6 +72,12 @@ module WeightedShuffle
         change_playlist pl
         true
       end
+
+      @playlist = @xc.playlist(config.playlist_name)
+
+      @playlist.entries do |entries|
+        set_length entries.length
+      end
     end
 
     def add_coll v
@@ -93,6 +101,13 @@ module WeightedShuffle
 
     def current?
       @current
+    end
+
+    def set_length new_length
+      @length = new_length
+      if @length - @pos < config.upcoming and current? then
+        # here we will fill the playlist
+      end
     end
 
     def run()
