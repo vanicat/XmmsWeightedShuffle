@@ -78,6 +78,14 @@ module WeightedShuffle
       @playlist.entries do |entries|
         set_length entries.length
       end
+
+      @playlist.current_pos do |cur|
+        set_pos cur
+      end
+
+      @xc.broadcast_playlist_current_pos do |cur|
+        set_pos cur[:position] if cur[:name] == config.playlist_name
+      end
     end
 
     def add_coll v
@@ -107,6 +115,13 @@ module WeightedShuffle
       @length = new_length
       if @length - @pos < config.upcoming and current? then
         # here we will fill the playlist
+      end
+    end
+
+    def set_pos new_pos
+      @pos = new_pos || 0
+      if @length - @pos < config.upcoming and current? then
+        # here we will remove what needed
       end
     end
 
