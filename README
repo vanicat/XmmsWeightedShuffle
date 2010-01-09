@@ -1,0 +1,48 @@
+This is a Weighted Shuffle playlist client. It implement a party
+shuffle playlist as an xmms2 client, with different probability
+depending on collection songs are in.
+
+the config file $XDG/xmms2/clients/WeightedShuffle.yaml look like:
+
+------------- 8< --------- 8< --------- 8< --------- 8< ---------
+---
+std:
+  colls:
+  - name: mycollections
+    mult: 4
+  - name: 1-rated
+    expr: rating:*1
+    mult: 1
+  - name: 5-rated
+    mult: 16
+    expr: rating:*5
+  - name: not-rated
+    expr: NOT +rating AND NOT in:bad
+    mult: 6
+  playlist: weighted_shuffle_playlist
+  history: 3
+  upcoming: 18
+------------- 8< --------- 8< --------- 8< --------- 8< ---------
+
+colls are the collection used for the probabilities.
+each "-" correspond to one collection, defined by the expr, or if it
+don't exist by the name. mult is the number by which the "default"
+probability is multiplied.
+
+playlist is the name of the playlist that WeightedShuffle will operate
+on
+
+history and upcoming are as in pshufle: history is the number of
+already played song left in the playlist, upcoming is the number of to
+be played song in the playlist.
+
+
+TODO:
+- actualize internal information when a song is changed
+- actualize internal information when a collection is changed
+- fix the history handling
+
+FAQ:
+- what happen if a song appear in several collection ?
+  Everything work as if its mult was the sum of the mult for each
+  collection the song is in
