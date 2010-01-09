@@ -7,8 +7,8 @@ require 'xmmsclient/async'
 require 'xmmsclient_glib'
 
 
-def debug(arg)
-  puts(arg)
+def debug(*arg)
+  puts(*arg)
 end
 
 module WeightedShuffle
