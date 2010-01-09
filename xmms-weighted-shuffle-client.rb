@@ -47,6 +47,7 @@ module WeightedShuffle
     attr_reader :xc, :colls, :config, :length, :pos, :playlist
 
     def initialize(config)
+      srand
       @config = config
       @current = false
       @pos = 0
@@ -128,16 +129,40 @@ module WeightedShuffle
 
     def set_length new_length
       @length = new_length
-      if @length - @pos < config.upcoming and current? then
-        # here we will fill the playlist
+      if @length - @pos < config.upcoming then
+        rand_song do |ids|
+          unless ids.empty?
+            playlist.add_entry(ids[0]) do |res|
+              true
+            end
+          end
+        end
       end
     end
 
     def set_pos new_pos
       @pos = new_pos || 0
-      if @length - @pos < config.upcoming and current? then
-        # here we will remove what needed
+      if @pos > config.history then
       end
+    end
+
+    def rand_colls
+      # look for the total number
+      max = colls.inject(0) do |acc,coll|
+        acc + coll.mult * coll.size
+      end
+      num = rand(max)
+      coll = colls.find do |coll|
+        num = num - coll.mult * coll.size
+        num < 0
+      end
+      return coll
+    end
+
+    def rand_song(&block)
+      coll = rand_colls()
+      num = rand(coll.size)
+      xc.coll_query_ids(coll.coll, ["id"], num, 1, &block)
     end
 
     def run()
