@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'glib2'
+require 'yaml'
 
 require 'xmmsclient'
 require 'xmmsclient/async'
@@ -16,20 +17,43 @@ module WeightedShuffle
   class Config
     attr_reader :colls, :playlist_name, :history, :upcoming
 
-    # will be read in configuration in some futur time
+    DEFAULT_CONF = { "std" =>
+      { "colls" => [
+                    { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
+                    { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
+                    { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
+                    { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
+                    { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
+                    { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
+                   ],
+        "playlist" => "weighted_shuffle_playlist",
+        "history" => 3,
+        "upcoming" => 18,
+      }
+    }
+
+    CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
+
     def initialize
-      @colls = [
-                { "name" => "2-rated", "mult" => 4 },
-                { "name" => "3-rated", "mult" => 8 },
-                { "name" => "4-rated", "mult" => 16 },
-                { "name" => "5-rated", "mult" => 32 },
-                { "name" => "not-rated", "expr" => "in:not-rated AND not in:bad", "mult" => 6 }
-               ]
+      begin
+        config_file=YAML.load_file(CONF_PATH)
+      rescue Errno::ENOENT => x
+        config_file=DEFAULT_CONF
+        File.open(CONF_PATH, 'w') do |out|
+          YAML.dump(DEFAULT_CONF,out)
+        end
+      end
 
-      @playlist_name = "weighted_shuffle_playlist"
+      std = DEFAULT_CONF["std"].merge(config_file["std"])  # for now, only the std playlist is supported. More to come latter
 
-      @history = 3
-      @upcoming = 18
+      @colls = std["colls"]
+      debug("collections:\n #{@colls.to_yaml}")
+      @playlist_name = std["playlist"]
+      debug("playlist: #{@playlist_name}")
+      @history = std["history"]
+      debug("history: #{@history}")
+      @upcoming = std["upcoming"]
+      debug("upcoming: #{@upcoming}")
     end
   end
 
