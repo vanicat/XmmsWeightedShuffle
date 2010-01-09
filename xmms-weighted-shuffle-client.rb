@@ -70,8 +70,13 @@ module WeightedShuffle
 
       @playlist = @xc.playlist(config.playlist_name)
 
-      initialize_playlist
-
+      xc.playback_status do |res|
+        #Here all stage 1 for colls are done
+        xc.playback_status do |res|
+          #here all stage 2 for colls are done, and stage 3 will be done before callback for the next command
+          initialize_playlist
+        end
+      end
     end
 
     def add_coll v
