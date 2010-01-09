@@ -110,14 +110,17 @@ module WeightedShuffle
 
       @playlist.entries do |entries|
         set_length entries.length
+        true
       end
 
       @playlist.current_pos do |cur|
-        set_pos cur
+        set_pos cur[:position] if cur[:name] == config.playlist_name
+        true
       end
 
       @xc.broadcast_playlist_current_pos do |cur|
         set_pos cur[:position] if cur[:name] == config.playlist_name
+        true
       end
 
       @xc.broadcast_playlist_changed do |cur|
@@ -139,13 +142,13 @@ module WeightedShuffle
     end
 
     def set_length new_length
-      debug new_length
+      debug "set_length #{new_length}"
       @length = new_length
       may_add_song
     end
 
     def set_pos new_pos
-      debug new_pos
+      debug "set_pos #{new_pos}"
       @pos = new_pos || 0
       may_add_song
       may_remove_song
