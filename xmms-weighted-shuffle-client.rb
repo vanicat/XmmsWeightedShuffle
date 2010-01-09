@@ -174,6 +174,7 @@ module WeightedShuffle
 
     def rand_song(&block)
       coll = rand_colls()
+      debug "song from #{coll[:name]}"
       num = rand(coll[:size])
       xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
     end
@@ -183,7 +184,9 @@ module WeightedShuffle
         @adding = true
         rand_song do |ids|
           unless ids.empty?
+            debug "will add #{ids[0]}"
             playlist.add_entry(ids[0]) do |res|
+              debug "#{ids[0]} added"
               @adding = false
               true
             end
