@@ -35,11 +35,11 @@ module WeightedShuffle
   end
 
   class Collection
-    attr_reader :coll, :mult, :count
-    def initialize(coll_val, mult_val,count_val)
+    attr_reader :coll, :mult, :size
+    def initialize(coll_val, size_val, mult_val)
       @coll = coll_val
       @mult = mult_val
-      @count = count_val
+      @size = size_val
     end
   end
 
