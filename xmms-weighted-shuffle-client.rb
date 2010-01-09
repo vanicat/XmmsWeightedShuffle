@@ -19,27 +19,17 @@ module WeightedShuffle
     # will be read in configuration in some futur time
     def initialize
       @colls = [
-                { "name" => "1-rated", "mult" => 0 },
-                { "name" => "2-rated", "mult" => 1 },
-                { "name" => "3-rated", "mult" => 2 },
-                { "name" => "4-rated", "mult" => 4 },
-                { "name" => "5-rated", "mult" => 8 },
-                { "name" => "not-rated", "mult" => 2 }
+                { "name" => "2-rated", "mult" => 4 },
+                { "name" => "3-rated", "mult" => 8 },
+                { "name" => "4-rated", "mult" => 16 },
+                { "name" => "5-rated", "mult" => 32 },
+                { "name" => "not-rated", "expr" => "in:not-rated AND not in:bad", "mult" => 6 }
                ]
 
       @playlist_name = "weighted_shuffle_playlist"
 
       @history = 3
       @upcoming = 18
-    end
-  end
-
-  class Collection
-    attr_reader :coll, :mult, :size
-    def initialize(coll_val, size_val, mult_val)
-      @coll = coll_val
-      @mult = mult_val
-      @size = size_val
     end
   end
 
@@ -83,17 +73,32 @@ module WeightedShuffle
     end
 
     def add_coll v
-      @xc.coll_get(v["name"]) do |coll|
-        if(coll.is_a?(Xmms::Collection)) then
-          @xc.coll_query_ids(coll) do |ids_list|
-            @colls.push(Collection.new(coll, ids_list.length, v["mult"]))
-            false
+      if v["expr"] then
+        coll=Xmms::Collection.parse(v["expr"])
+        load_coll(v["name"], coll, v["mult"])
+      else
+        xc.coll_get(v["name"]) do |coll|
+          if(coll.is_a?(Xmms::Collection)) then
+            load_coll(v["name"], coll, v["mult"])
+          else
+            puts "Problem with collection #{v["name"]}"
+            puts "Please make sure it exists."
+            exit
           end
+        end
+      end
+    end
+
+    def load_coll(name,coll,mult)
+      @xc.coll_query_ids(coll) do |ids_list|
+        if ids_list then
+          @colls.push({:name => name, :coll => coll, :mult => mult, :size => ids_list.length})
         else
-          puts "Problem with collection #{v["name"]}"
-          puts "Please make sure it exists."
+          puts "Problem with collection #{name}"
+          puts "Please make sure it exists, or that its expression is correct"
           exit
         end
+        false
       end
     end
 
@@ -157,11 +162,11 @@ module WeightedShuffle
     def rand_colls
       # look for the total number
       max = colls.inject(0) do |acc,coll|
-        acc + coll.mult * coll.size
+        acc + coll[:mult] * coll[:size]
       end
       num = rand(max)
       coll = colls.find do |coll|
-        num = num - coll.mult * coll.size
+        num = num - coll[:mult] * coll[:size]
         num < 0
       end
       return coll
@@ -169,8 +174,8 @@ module WeightedShuffle
 
     def rand_song(&block)
       coll = rand_colls()
-      num = rand(coll.size)
-      xc.coll_query_ids(coll.coll, ["id"], num, 1, &block)
+      num = rand(coll[:size])
+      xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
     end
 
     def may_add_song
