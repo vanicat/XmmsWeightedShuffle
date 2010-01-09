@@ -56,18 +56,22 @@ module WeightedShuffle
       @colls = []
 
       @config.colls.each do |v|
-        xc.coll_get(v["name"]) do |coll|
-          if(coll.is_a?(Xmms::Collection)) then
-            xc.coll_query_ids(coll) do |ids_list|
-              @colls.push( Collection.new(coll, ids_list.length, v["mult"]) )
-              false
-            end
-          else
-            puts "Problem with collection #{v["name"]}"
-            puts "Please make sure it exists."
-            exit
+        add_coll v
+        false
+      end
+    end
+
+    def add_coll v
+      @xc.coll_get(v["name"]) do |coll|
+        if(coll.is_a?(Xmms::Collection)) then
+          @xc.coll_query_ids(coll) do |ids_list|
+            @colls.push(Collection.new(coll, ids_list.length, v["mult"]))
+            false
           end
-          false
+        else
+          puts "Problem with collection #{v["name"]}"
+          puts "Please make sure it exists."
+          exit
         end
       end
     end
