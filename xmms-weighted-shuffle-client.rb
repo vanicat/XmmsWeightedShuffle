@@ -43,6 +43,7 @@ module WeightedShuffle
 
     def initialize(config)
       @config = config
+      @current = false
       begin
         @xc = Xmms::Client::Async.new('PLaylistClient').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
@@ -59,6 +60,16 @@ module WeightedShuffle
         add_coll v
         false
       end
+
+      @xc.playlist_current_active do |pl|
+        change_playlist pl
+        true
+      end
+
+      @xc.broadcast_playlist_loaded do |pl|
+        change_playlist pl
+        true
+      end
     end
 
     def add_coll v
@@ -74,6 +85,14 @@ module WeightedShuffle
           exit
         end
       end
+    end
+
+    def change_playlist pl
+      @current = pl == config.playlist_name
+    end
+
+    def current?
+      @current
     end
 
     def run()
