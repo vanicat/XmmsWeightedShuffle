@@ -63,29 +63,10 @@ module WeightedShuffle
         false
       end
 
-      @xc.playlist_current_active do |pl|
-        change_playlist pl
-        true
-      end
-
-      @xc.broadcast_playlist_loaded do |pl|
-        change_playlist pl
-        true
-      end
-
       @playlist = @xc.playlist(config.playlist_name)
 
-      @playlist.entries do |entries|
-        set_length entries.length
-      end
+      initialize_playlist
 
-      @playlist.current_pos do |cur|
-        set_pos cur
-      end
-
-      @xc.broadcast_playlist_current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == config.playlist_name
-      end
     end
 
     def add_coll v
@@ -100,6 +81,30 @@ module WeightedShuffle
           puts "Please make sure it exists."
           exit
         end
+      end
+    end
+
+    def initialize_playlist
+      @xc.playlist_current_active do |pl|
+        change_playlist pl
+        true
+      end
+
+      @xc.broadcast_playlist_loaded do |pl|
+        change_playlist pl
+        true
+      end
+
+      @playlist.entries do |entries|
+        set_length entries.length
+      end
+
+      @playlist.current_pos do |cur|
+        set_pos cur
+      end
+
+      @xc.broadcast_playlist_current_pos do |cur|
+        set_pos cur[:position] if cur[:name] == config.playlist_name
       end
     end
 
