@@ -117,6 +117,15 @@ module WeightedShuffle
       @xc.broadcast_playlist_current_pos do |cur|
         set_pos cur[:position] if cur[:name] == config.playlist_name
       end
+
+      @xc.broadcast_playlist_changed do |cur|
+        if cur[:name] == config.playlist_name then
+          @playlist.entries do |entries|
+            set_length entries.length
+          end
+        end
+        true
+      end
     end
 
     def change_playlist pl
