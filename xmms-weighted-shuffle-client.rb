@@ -45,7 +45,7 @@ module WeightedShuffle
       @adding = false
       @removing = false
       begin
-        @xc = Xmms::Client::Async.new('PLaylistClient').connect(ENV['XMMS_PATH'])
+        @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
         puts 'Failed to connect to XMMS2 daemon.'
         puts 'Please make sure xmms2d is running and using the correct IPC path.'
