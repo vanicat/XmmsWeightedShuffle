@@ -9,7 +9,7 @@ require 'xmmsclient_glib'
 
 
 def debug(*arg)
-  puts(*arg)
+#  puts(*arg)
 end
 
 module WeightedShuffle
