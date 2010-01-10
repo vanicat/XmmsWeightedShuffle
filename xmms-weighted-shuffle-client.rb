@@ -75,6 +75,15 @@ module WeightedShuffle
         puts 'Please make sure xmms2d is running and using the correct IPC path.'
         exit
       end
+
+      @xc.on_disconnect do
+        exit(0)
+      end
+
+      @xc.broadcast_quit do |res|
+        exit(0)
+      end
+
       @xc.add_to_glib_mainloop
       @ml = GLib::MainLoop.new(nil, false)
 
