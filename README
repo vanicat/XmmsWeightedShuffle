@@ -40,7 +40,6 @@ be played song in the playlist.
 TODO:
 - actualize internal information when a song is changed
 - actualize internal information when a collection is changed
-- fix the history handling
 
 FAQ:
 - what happen if a song appear in several collection ?

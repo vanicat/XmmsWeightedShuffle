@@ -224,9 +224,13 @@ module WeightedShuffle
 
     def may_remove_song
       if not @removing and @pos > config.history then
+        debug "will remove"
         @removing = true
         playlist.remove_entry(1) do |res|
+          debug "has removed"
           @removing = false
+          may_remove_song       # pos is updated before deletion is confirmed,
+                                # so we have to check if the pos is still a problem
           false
         end
       end
