@@ -24,10 +24,10 @@ std:
   upcoming: 18
 ------------- 8< --------- 8< --------- 8< --------- 8< ---------
 
-colls are the collection used for the probabilities.
-each "-" correspond to one collection, defined by the expr, or if it
-don't exist by the name. mult is the number by which the "default"
-probability is multiplied.
+colls are the collections used for the probabilities.
+Each "-" correspond to one collection, defined by the expr, or if
+there is no expr by the name. mult is the number by which the
+"default" probability is multiplied.
 
 playlist is the name of the playlist that WeightedShuffle will operate
 on
