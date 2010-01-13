@@ -68,7 +68,7 @@ module WeightedShuffle
     end
 
     def each(&body)
-      playlist.each(&body)
+      @playlists.each(&body)
     end
 
     def [] name
@@ -76,52 +76,33 @@ module WeightedShuffle
     end
   end
 
-  class Client
-    attr_reader :xc, :colls, :config, :length, :pos, :playlist
-
-    def initialize(config)
-      srand
+  class Playlists
+    def initialize(xc, config)
+      @xc = xc
       @config = config
-      @current = false
       @pos = 0
       @length = 0
       @adding = false
       @removing = false
-      begin
-        @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
-      rescue Xmms::Client::ClientError
-        puts 'Failed to connect to XMMS2 daemon.'
-        puts 'Please make sure xmms2d is running and using the correct IPC path.'
-        exit
-      end
-
-      @xc.on_disconnect do
-        exit(0)
-      end
-
-      @xc.broadcast_quit do |res|
-        exit(0)
-      end
-
-      @xc.add_to_glib_mainloop
-      @ml = GLib::MainLoop.new(nil, false)
+      @name = @config.name
 
       @colls = []
 
-      config['std'].colls.each do |v|
+      @config.colls.each do |v|
         add_coll v
         false
       end
 
-      @playlist = @xc.playlist(config['std'].name)
+      @playlist = @xc.playlist(@name)
 
-      xc.playback_status do |res|
+      @xc.playback_status do |res|
         #Here all stage 1 for colls are done
-        xc.playback_status do |res|
+        @xc.playback_status do |res|
           #here all stage 2 for colls are done, and stage 3 will be done before callback for the next command
           initialize_playlist
         end
       end
+
     end
 
     def add_coll v
@@ -129,7 +110,7 @@ module WeightedShuffle
         coll=Xmms::Collection.parse(v["expr"])
         load_coll(v["name"], coll, v["mult"])
       else
-        xc.coll_get(v["name"]) do |coll|
+        @xc.coll_get(v["name"]) do |coll|
           if(coll.is_a?(Xmms::Collection)) then
             load_coll(v["name"], coll, v["mult"])
           else
@@ -155,47 +136,29 @@ module WeightedShuffle
     end
 
     def initialize_playlist
-      @xc.playlist_current_active do |pl|
-        change_playlist pl
-        true
-      end
-
-      @xc.broadcast_playlist_loaded do |pl|
-        change_playlist pl
-        true
-      end
-
       @playlist.entries do |entries|
         set_length entries.length
         true
       end
 
       @playlist.current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == config['std'].name
+        set_pos cur[:position] if cur[:name] == @name
         true
       end
 
       @xc.broadcast_playlist_current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == config['std'].name
+        set_pos cur[:position] if cur[:name] == @name
         true
       end
 
       @xc.broadcast_playlist_changed do |cur|
-        if cur[:name] == config['std'].name then
+        if cur[:name] == @name then
           @playlist.entries do |entries|
             set_length entries.length
           end
         end
         true
       end
-    end
-
-    def change_playlist pl
-      @current = pl == config['std'].name
-    end
-
-    def current?
-      @current
     end
 
     def set_length new_length
@@ -213,11 +176,11 @@ module WeightedShuffle
 
     def rand_colls
       # look for the total number
-      max = colls.inject(0) do |acc,coll|
+      max = @colls.inject(0) do |acc,coll|
         acc + coll[:mult] * coll[:size]
       end
       num = rand(max)
-      coll = colls.find do |coll|
+      coll = @colls.find do |coll|
         num = num - coll[:mult] * coll[:size]
         num < 0
       end
@@ -228,17 +191,17 @@ module WeightedShuffle
       coll = rand_colls()
       debug "song from #{coll[:name]}"
       num = rand(coll[:size])
-      xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
+      @xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
     end
 
     def may_add_song
       debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
-      unless @adding or @length - @pos >= config['std'].upcoming
+      unless @adding or @length - @pos >= @config.upcoming
         @adding = true
         rand_song do |ids|
           unless ids.empty?
             debug "will add #{ids[0]}"
-            playlist.add_entry(ids[0]) do |res|
+            @playlist.add_entry(ids[0]) do |res|
               debug "#{ids[0]} added"
               @adding = false
               true
@@ -252,10 +215,10 @@ module WeightedShuffle
     end
 
     def may_remove_song
-      if not @removing and @pos > config['std'].history then
+      if not @removing and @pos > @config.history then
         debug "will remove"
         @removing = true
-        playlist.remove_entry(1) do |res|
+        @playlist.remove_entry(1) do |res|
           debug "has removed"
           @removing = false
           may_remove_song       # pos is updated before deletion is confirmed,
@@ -263,6 +226,35 @@ module WeightedShuffle
           false
         end
       end
+    end
+  end
+
+  class Client
+    def initialize(config)
+      srand
+      @config = config
+      begin
+        @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
+      rescue Xmms::Client::ClientError
+        puts 'Failed to connect to XMMS2 daemon.'
+        puts 'Please make sure xmms2d is running and using the correct IPC path.'
+        exit
+      end
+
+      @xc.on_disconnect do
+        exit(0)
+      end
+
+      @xc.broadcast_quit do |res|
+        exit(0)
+      end
+
+      @xc.add_to_glib_mainloop
+      @ml = GLib::MainLoop.new(nil, false)
+
+      @playlists = {}
+
+      @config.each { |conf| @playlists[ conf[1].name ] = Playlists.new(@xc, conf[1]) }
     end
 
     def run()
