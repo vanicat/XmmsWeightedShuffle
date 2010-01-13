@@ -15,45 +15,64 @@ end
 module WeightedShuffle
 
   class Config
-    attr_reader :colls, :playlist_name, :history, :upcoming
-
-    DEFAULT_CONF = { "std" =>
-      { "colls" => [
-                    { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
-                    { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
-                    { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
-                    { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
-                    { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
-                    { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
-                   ],
-        "playlist" => "weighted_shuffle_playlist",
-        "history" => 3,
-        "upcoming" => 18,
-      }
-    }
 
     CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
+
+    DEFAULT_PLAYLIST_CONF = {
+      "colls" => [
+                  { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
+                  { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
+                  { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
+                  { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
+                  { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
+                  { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
+                 ],
+      "history" => 3,
+      "upcoming" => 18,
+    }
+
+    DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
+
+    class Playlist
+      attr_reader :conf, :colls, :name, :history, :upcoming
+
+
+      def initialize(name,playlist_conf)
+        @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
+        @conf["playlist"] ||= name
+
+        @colls = conf["colls"]
+        debug("collections:\n #{colls.to_yaml}")
+        @name = conf["playlist"]
+        debug("playlist: #{name}")
+        @history = conf["history"]
+        debug("history: #{history}")
+        @upcoming = conf["upcoming"]
+        debug("upcoming: #{upcoming}")
+      end
+    end
 
     def initialize
       begin
         config_file=YAML.load_file(CONF_PATH)
       rescue Errno::ENOENT => x
-        config_file=DEFAULT_CONF
+        config_file={ "std" => DEFAULT_PLAYLIST_CONF.merge({"playlist" => DEFAULT_PLAYLIST_NAME}) }
         File.open(CONF_PATH, 'w') do |out|
           YAML.dump(DEFAULT_CONF,out)
         end
       end
 
-      std = DEFAULT_CONF["std"].merge(config_file["std"])  # for now, only the std playlist is supported. More to come latter
+      @playlists = { }
 
-      @colls = std["colls"]
-      debug("collections:\n #{@colls.to_yaml}")
-      @playlist_name = std["playlist"]
-      debug("playlist: #{@playlist_name}")
-      @history = std["history"]
-      debug("history: #{@history}")
-      @upcoming = std["upcoming"]
-      debug("upcoming: #{@upcoming}")
+      config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
+    end
+
+    def each(&body)
+      playlist.each(&body)
+    end
+
+    def [] name
+      @playlists[name]
     end
   end
 
@@ -89,12 +108,12 @@ module WeightedShuffle
 
       @colls = []
 
-      @config.colls.each do |v|
+      config['std'].colls.each do |v|
         add_coll v
         false
       end
 
-      @playlist = @xc.playlist(config.playlist_name)
+      @playlist = @xc.playlist(config['std'].name)
 
       xc.playback_status do |res|
         #Here all stage 1 for colls are done
@@ -152,17 +171,17 @@ module WeightedShuffle
       end
 
       @playlist.current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == config.playlist_name
+        set_pos cur[:position] if cur[:name] == config['std'].name
         true
       end
 
       @xc.broadcast_playlist_current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == config.playlist_name
+        set_pos cur[:position] if cur[:name] == config['std'].name
         true
       end
 
       @xc.broadcast_playlist_changed do |cur|
-        if cur[:name] == config.playlist_name then
+        if cur[:name] == config['std'].name then
           @playlist.entries do |entries|
             set_length entries.length
           end
@@ -172,7 +191,7 @@ module WeightedShuffle
     end
 
     def change_playlist pl
-      @current = pl == config.playlist_name
+      @current = pl == config['std'].name
     end
 
     def current?
@@ -213,7 +232,8 @@ module WeightedShuffle
     end
 
     def may_add_song
-      unless @adding or @length - @pos >= config.upcoming
+      debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
+      unless @adding or @length - @pos >= config['std'].upcoming
         @adding = true
         rand_song do |ids|
           unless ids.empty?
@@ -232,7 +252,7 @@ module WeightedShuffle
     end
 
     def may_remove_song
-      if not @removing and @pos > config.history then
+      if not @removing and @pos > config['std'].history then
         debug "will remove"
         @removing = true
         playlist.remove_entry(1) do |res|
