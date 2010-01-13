@@ -94,15 +94,6 @@ module WeightedShuffle
       end
 
       @playlist = @xc.playlist(@name)
-
-      @xc.playback_status do |res|
-        #Here all stage 1 for colls are done
-        @xc.playback_status do |res|
-          #here all stage 2 for colls are done, and stage 3 will be done before callback for the next command
-          initialize_playlist
-        end
-      end
-
     end
 
     def add_coll v
@@ -136,27 +127,17 @@ module WeightedShuffle
     end
 
     def initialize_playlist
-      @playlist.entries do |entries|
-        set_length entries.length
-        true
-      end
+      update_length
 
       @playlist.current_pos do |cur|
         set_pos cur[:position] if cur[:name] == @name
         true
       end
+    end
 
-      @xc.broadcast_playlist_current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == @name
-        true
-      end
-
-      @xc.broadcast_playlist_changed do |cur|
-        if cur[:name] == @name then
-          @playlist.entries do |entries|
-            set_length entries.length
-          end
-        end
+    def update_length
+      @playlist.entries do |entries|
+        set_length entries.length
         true
       end
     end
@@ -255,6 +236,29 @@ module WeightedShuffle
       @playlists = {}
 
       @config.each { |conf| @playlists[ conf[1].name ] = Playlists.new(@xc, conf[1]) }
+
+      @xc.playback_status do |res|
+        #Here all stage 1 for colls are done
+        @xc.playback_status do |res|
+          #here all stage 2 for colls are done, and stage 3 will be done before the callback of the next command
+          @playlists.each do |n,list|
+            list.initialize_playlist
+          end
+
+          @xc.broadcast_playlist_current_pos do |cur|
+            cur_list = @playlists[cur[:name]]
+            cur_list.set_pos(cur[:position]) if cur_list
+            true
+          end
+
+          @xc.broadcast_playlist_changed do |cur|
+            cur_list = @playlists[cur[:name]]
+            cur_list.update_length if cur_list
+            true
+          end
+        end
+      end
+
     end
 
     def run()
