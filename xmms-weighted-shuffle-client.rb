@@ -235,7 +235,7 @@ module WeightedShuffle
 
       @playlists = {}
 
-      @config.each { |conf| @playlists[ conf[1].name ] = Playlists.new(@xc, conf[1]) }
+      @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
 
       @xc.playback_status do |res|
         #Here all stage 1 for colls are done
