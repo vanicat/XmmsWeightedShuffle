@@ -61,6 +61,7 @@ module WeightedShuffle
 
     # {{{ def initialize
     def initialize
+      @mtime = File.mtime(CONF_PATH)
       begin
         config_file=YAML.load_file(CONF_PATH)
       rescue Errno::ENOENT => x
@@ -75,6 +76,10 @@ module WeightedShuffle
       config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
     end
     # }}}
+
+    def newer_conf?
+      @mtime < File.mtime(CONF_PATH)
+    end
 
     def each(&body)
       @playlists.each(&body)
