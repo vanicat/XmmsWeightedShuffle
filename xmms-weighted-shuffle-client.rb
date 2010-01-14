@@ -56,7 +56,7 @@ module WeightedShuffle
       begin
         config_file=YAML.load_file(CONF_PATH)
       rescue Errno::ENOENT => x
-        config_file={ "std" => DEFAULT_PLAYLIST_CONF.merge({"playlist" => DEFAULT_PLAYLIST_NAME}) }
+        config_file={ DEFAULT_PLAYLIST_NAME => DEFAULT_PLAYLIST_CONF }
         File.open(CONF_PATH, 'w') do |out|
           YAML.dump(DEFAULT_CONF,out)
         end
