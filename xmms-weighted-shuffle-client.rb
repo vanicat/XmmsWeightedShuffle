@@ -211,9 +211,9 @@ module WeightedShuffle
   end
 
   class Client
-    def initialize(config)
+    def initialize
       srand
-      @config = config
+      @config = Config.new()
       begin
         @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
@@ -266,5 +266,5 @@ module WeightedShuffle
     end
   end
 
-  Client.new(Config.new()).run()
+  Client.new.run()
 end
