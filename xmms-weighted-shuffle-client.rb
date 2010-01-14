@@ -14,10 +14,12 @@ end
 
 module WeightedShuffle
 
+  # {{{ class Config
   class Config
 
     CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
 
+    # {{{ Default Playlist Consts
     DEFAULT_PLAYLIST_CONF = {
       "colls" => [
                   { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
@@ -32,11 +34,14 @@ module WeightedShuffle
     }
 
     DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
+    # }}}
 
+    # {{{ class Playlist
     class Playlist
       attr_reader :conf, :colls, :name, :history, :upcoming
 
 
+      # {{{ def initialize
       def initialize(name,playlist_conf)
         @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
         @conf["playlist"] ||= name
@@ -50,8 +55,11 @@ module WeightedShuffle
         @upcoming = conf["upcoming"]
         debug("upcoming: #{upcoming}")
       end
+      # }}}
     end
+    # }}}
 
+    # {{{ def initialize
     def initialize
       begin
         config_file=YAML.load_file(CONF_PATH)
@@ -66,6 +74,7 @@ module WeightedShuffle
 
       config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
     end
+    # }}}
 
     def each(&body)
       @playlists.each(&body)
@@ -75,8 +84,11 @@ module WeightedShuffle
       @playlists[name]
     end
   end
+  # }}}
 
+  # {{{ class Playlists
   class Playlists
+    # {{{ def initialize(xc, config)
     def initialize(xc, config)
       @xc = xc
       @config = config
@@ -94,7 +106,9 @@ module WeightedShuffle
 
       @playlist = @xc.playlist(@name)
     end
+    # }}}
 
+    # {{{ def add_coll
     def add_coll v
       if v["expr"] then
         coll=Xmms::Collection.parse(v["expr"])
@@ -112,7 +126,9 @@ module WeightedShuffle
         end
       end
     end
+    # }}}
 
+    # {{{ def load_coll
     def load_coll(name,coll,mult)
       @xc.coll_query_ids(coll) do |ids_list|
         if ids_list then
@@ -125,7 +141,9 @@ module WeightedShuffle
         false
       end
     end
+    # }}}
 
+    # {{{ def initialize_playlist
     def initialize_playlist
       update_length
 
@@ -134,27 +152,35 @@ module WeightedShuffle
         true
       end
     end
+    # }}}
 
+    # {{{ def update_length
     def update_length
       @playlist.entries do |entries|
         set_length entries.length
         true
       end
     end
+    # }}}
 
+    # {{{ def set_length
     def set_length new_length
       debug "set_length #{new_length}"
       @length = new_length
       may_add_song
     end
+    # }}}
 
+    # {{{ def set_pos
     def set_pos new_pos
       debug "set_pos #{new_pos}"
       @pos = new_pos || 0
       may_add_song
       may_remove_song
     end
+    # }}}
 
+    # {{{ def rand_colls
     def rand_colls
       # look for the total number
       max = @colls.inject(0) do |acc,coll|
@@ -167,14 +193,18 @@ module WeightedShuffle
       end
       return coll
     end
+    # }}}
 
+    # {{{ def rand_song(&block)
     def rand_song(&block)
       coll = rand_colls()
       debug "song from #{coll[:name]}"
       num = rand(coll[:size])
       @xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
     end
+    # }}}
 
+    # {{{ def may_add_song
     def may_add_song
       debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
       unless @adding or @length - @pos >= @config.upcoming
@@ -194,7 +224,9 @@ module WeightedShuffle
         end
       end
     end
+    # }}}
 
+    # {{{ def may_remove_song
     def may_remove_song
       if not @removing and @pos > @config.history then
         debug "will remove"
@@ -208,9 +240,13 @@ module WeightedShuffle
         end
       end
     end
+    # }}}
   end
+  # }}}
 
+  # {{{ class Client
   class Client
+    # {{{ def initialize
     def initialize
       srand
       @config = Config.new()
@@ -260,13 +296,17 @@ module WeightedShuffle
         end
         true
       end
-
     end
+    # }}}
 
     def run()
       @ml.run
     end
   end
+  # }}}
 
   Client.new.run()
 end
+
+#File layout controlled by Emacs folding.el available at:
+#Latest folding is available at http://cvs.xemacs.org/viewcvs.cgi/XEmacs/packages/xemacs-packages/text-modes/
