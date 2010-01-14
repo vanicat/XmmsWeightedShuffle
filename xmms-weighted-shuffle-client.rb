@@ -90,7 +90,6 @@ module WeightedShuffle
 
       @config.colls.each do |v|
         add_coll v
-        false
       end
 
       @playlist = @xc.playlist(@name)
@@ -109,6 +108,7 @@ module WeightedShuffle
             puts "Please make sure it exists."
             exit
           end
+          true
         end
       end
     end
@@ -238,7 +238,7 @@ module WeightedShuffle
       @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
 
       @xc.playback_status do |res|
-        #Here all stage 1 for colls are done
+        # Here all stage 1 for colls are done
         @xc.playback_status do |res|
           #here all stage 2 for colls are done, and stage 3 will be done before the callback of the next command
           @playlists.each do |n,list|
@@ -256,7 +256,9 @@ module WeightedShuffle
             cur_list.update_length if cur_list
             true
           end
+          true
         end
+        true
       end
 
     end
