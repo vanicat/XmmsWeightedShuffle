@@ -318,6 +318,10 @@ module WeightedShuffle
     end
     # }}}
 
+    def may_reread_config()
+      read_config if @config.newer_conf?
+    end
+
     def run()
       @ml.run
     end
