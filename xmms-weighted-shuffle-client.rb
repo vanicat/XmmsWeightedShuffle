@@ -254,7 +254,6 @@ module WeightedShuffle
     # {{{ def initialize
     def initialize
       srand
-      @config = Config.new()
       begin
         @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
       rescue Xmms::Client::ClientError
@@ -274,18 +273,13 @@ module WeightedShuffle
       @xc.add_to_glib_mainloop
       @ml = GLib::MainLoop.new(nil, false)
 
-      @playlists = {}
-
-      @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
+      read_config()
 
       @xc.playback_status do |res|
         # Here all stage 1 for colls are done
         @xc.playback_status do |res|
-          #here all stage 2 for colls are done, and stage 3 will be done before the callback of the next command
-          @playlists.each do |n,list|
-            list.initialize_playlist
-          end
-
+          # here all stage 2 for colls are done,
+          # and stage 3 will be done before the callback of the next command
           @xc.broadcast_playlist_current_pos do |cur|
             cur_list = @playlists[cur[:name]]
             cur_list.set_pos(cur[:position]) if cur_list
@@ -295,6 +289,26 @@ module WeightedShuffle
           @xc.broadcast_playlist_changed do |cur|
             cur_list = @playlists[cur[:name]]
             cur_list.update_length if cur_list
+            true
+          end
+          true
+        end
+        true
+      end
+    end
+    # }}}
+
+    # {{{ def read_config()
+    def read_config()
+      @config = Config.new()
+      @playlists = {}
+      @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
+      @xc.playback_status do |res|
+        #Here all stage 1 for colls are done
+        @xc.playback_status do |res|
+          #here all stage 2 for colls are done, and stage 3 will be done before the callback of the next command
+          @playlists.each do |n,list|
+            list.initialize_playlist
             true
           end
           true
