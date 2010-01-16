@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/usr/bin/ruby
 
 require 'glib2'
 require 'yaml'
@@ -7,6 +7,8 @@ require 'xmmsclient'
 require 'xmmsclient/async'
 require 'xmmsclient_glib'
 
+
+$0 = "xmms2-weighted-shuffle-client"
 
 def debug(*arg)
 #  puts(*arg)
