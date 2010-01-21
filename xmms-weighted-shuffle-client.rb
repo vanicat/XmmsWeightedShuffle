@@ -238,7 +238,7 @@ module WeightedShuffle
       if not @removing and @pos > @config.history then
         debug "will remove"
         @removing = true
-        @playlist.remove_entry(1) do |res|
+        @playlist.remove_entry(0) do |res|
           debug "has removed"
           @removing = false
           may_remove_song       # pos is updated before deletion is confirmed,
