@@ -214,7 +214,7 @@ module WeightedShuffle
     # {{{ def may_add_song
     def may_add_song
       debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
-      unless @adding or @length - @pos >= @config.upcoming
+      unless @adding or @length - @pos + 1 >= @config.upcoming
         @adding = true
         rand_song do |ids|
           unless ids.empty?
