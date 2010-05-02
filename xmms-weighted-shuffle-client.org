@@ -1,0 +1,541 @@
+#+Title: Xmms2 Weighted Shuffle playlist
+* What is this
+  This is a Weighted Shuffle playlist client for xmms. It implement a
+  party shuffle playlist as an xmms2 client, with different
+  probability for different collection.
+
+** Copyright and licence
+   :PROPERTIES:
+   :ID:       7ae19bd1-834b-4964-9ef8-1392b478c820
+   :END:
+#+srcname: licence
+#+begin_src ruby
+  Copyright (c) 2010 Rémi Vanicat
+  
+  Permission is hereby granted, free of charge, to any person obtaining a
+  copy of this software and associated documentation files (the "Software"),
+  to deal in the Software without restriction, including without limitation
+  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  and/or sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+  SOFTWARE IN THE PUBLIC INTEREST, INC. BE LIABLE FOR ANY CLAIM, DAMAGES OR
+  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+  ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  DEALINGS IN THE SOFTWARE.
+  
+  Except as contained in this notice, the name of Rémi Vanicat shall not be
+  used in advertising or otherwise to promote the sale, use or other dealings
+  in this Software without prior written authorization from Rémi Vanicat.
+#+end_src
+** Literate programming and org-mode
+   :PROPERTIES:
+   :ID:       e2d2306a-20b4-4215-8ce4-16d222e186a1
+   :END:
+   This code is wrote using literate programing for ruby with org mode. The real
+   code is between the '#+begin_src ruby' and '#+end_src', with Emacs, org-mode
+   and org-babel, C-c ' will put you in a buffer with the correct mode for
+   editing the snippet your are in.
+   
+   You will need to add the following to your .emacs:
+#+begin_src emacs-lisp
+  (require 'org-babel-init)
+  (require 'org-babel-ruby)
+#+end_src
+
+  Extracting the code will be done by C-cM-bt
+
+  Reading http://orgmode.org/worg/org-contrib/babel/index.php could be a good idea.x
+
+* The code
+  :PROPERTIES:
+  :noweb:   yes
+  :ID:       ac7f6246-329c-4319-8aa6-17663b999e5b
+  :END:
+
+#+begin_src ruby :tangle yes
+  # <<licence>>
+
+  <<header>>
+
+  <<weightedshuffle-module>>
+#+end_src
+
+** Header
+   :PROPERTIES:
+   :ID:       5c7c91f4-0ce4-4a8d-af36-bdbbc0265763
+   :END:
+   The much required libraries, a debuging function, and setting the name of the executable
+#+srcname: header
+#+begin_src ruby
+  require 'glib2'
+  require 'yaml'
+  
+  require 'xmmsclient'
+  require 'xmmsclient/async'
+  require 'xmmsclient_glib'
+  
+  def debug(*arg)
+  #  puts(*arg)
+  end
+
+  $0 = "xmms2-weighted-shuffle-client"
+#+end_src
+** The module WeightedShuffle
+   :PROPERTIES:
+   :ID:       c1374ab1-8d65-45c1-9157-c73558668660
+   :END:
+#+srcname: weightedshuffle-module
+#+begin_src ruby
+  module WeightedShuffle
+    <<config-class>>
+  
+    <<playlists-class>>
+  
+    <<client-class>>
+
+    <<running>>
+  end
+#+end_src
+*** Reading the configuration
+   :PROPERTIES:
+   :ID:       55a139ea-8380-4a01-b10b-22a54ffdfab4
+   :END:
+#+srcname: config-class
+#+begin_src ruby
+  class Config
+    CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
+  
+    <<default-playlist-conf>>
+  
+    <<playlist-config-class>>
+  
+    <<config-initialize>>
+  
+    <<config-is-newer>>
+  
+    <<config-is-a-hash>>
+  end
+#+end_src
+**** When there is no configured playlist, we use this one.
+    :PROPERTIES:
+    :ID:       8bbf68f3-5d6a-4450-b3d6-c1da788b01ab
+    :END:
+#+srcname: default-playlist-conf
+#+begin_src ruby
+  DEFAULT_PLAYLIST_CONF = {
+    "colls" => [
+                { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
+                { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
+                { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
+                { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
+                { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
+                { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
+               ],
+    "history" => 3,
+    "upcoming" => 18,
+  }
+    
+  DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
+#+end_src
+**** class Playlist
+    :PROPERTIES:
+    :ID:       0120e590-43cd-4c6d-922c-006decdd54db
+    :END:
+#+srcname: playlist-config-class
+#+begin_src ruby :exports none
+  class Playlist
+    attr_reader :conf, :colls, :name, :history, :upcoming
+    
+    <<initialize-playlist-config>>
+  end
+#+end_src
+**** initialization of the config's playlist
+     :PROPERTIES:
+     :ID:       b8c95d54-dccf-4181-8a33-935331cda213
+     :END:
+#+srcname: initialize-playlist-config
+#+begin_src ruby
+  def initialize(name,playlist_conf)
+    @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
+    @conf["playlist"] ||= name
+    
+    @colls = conf["colls"]
+    debug("collections:\n #{colls.to_yaml}")
+    @name = conf["playlist"]
+    debug("playlist: #{name}")
+    @history = conf["history"]
+    debug("history: #{history}")
+    @upcoming = conf["upcoming"]
+    debug("upcoming: #{upcoming}")
+  end
+#+end_src
+**** really reading the configuration
+    :PROPERTIES:
+    :ID:       4339e85c-8b5d-42db-a430-53b49156bdb3
+    :END:
+#+srcname: config-initialize
+#+begin_src ruby
+  def initialize
+    @mtime = File.mtime(CONF_PATH)
+    begin
+      config_file=YAML.load_file(CONF_PATH)
+    rescue Errno::ENOENT => x
+      config_file={ DEFAULT_PLAYLIST_NAME => DEFAULT_PLAYLIST_CONF }
+      File.open(CONF_PATH, 'w') do |out|
+        YAML.dump(DEFAULT_CONF,out)
+      end
+    end
+    
+    @playlists = { }
+    
+    config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
+  end
+#+end_src
+**** checking for more recent configuration file
+     :PROPERTIES:
+     :ID:       9efd8222-f146-4a7b-afd4-878fdffb8810
+     :END:
+#+srcname: config-is-newer
+#+begin_src ruby
+  def newer_conf?
+    @mtime < File.mtime(CONF_PATH)
+  end
+#+end_src
+**** Acting as a hash of playlist
+     :PROPERTIES:
+     :ID:       63a8e11c-5752-46ec-89c4-04a60f54768f
+     :END:
+#+srcname: config-is-a-hash
+#+begin_src ruby
+  def each(&body)
+    @playlists.each(&body)
+  end
+  
+  def [] name
+    @playlists[name]
+  end
+#+end_src
+
+*** The Playlists class
+   In charge to add and remove song from the xmms Playlists
+   :PROPERTIES:
+   :ID:       1158ccc9-48a0-48fe-9e83-389238a620bc
+   :END:
+#+srcname: playlists-class
+#+begin_src ruby
+  class Playlists
+    <<playlist-init>>
+
+    <<playlist-coll>>
+
+    <<playlist-listen>>
+
+    <<playlist-update>>
+
+    <<playlist-rand>>
+
+    <<playlist-add>>
+
+    <<playlist-remove>>
+  end
+#+end_src
+**** def initialize(xc, config)
+    :PROPERTIES:
+    :ID:       d9aeb0e3-0fcc-43cf-a784-d6a2dc8ec459
+    :END:
+#+srcname: playlist-init
+#+begin_src ruby
+  def initialize(xc, config)
+    @xc = xc
+    @config = config
+    @pos = 0
+    @length = 0
+    @adding = false
+    @removing = false
+    @name = @config.name
+    
+    @colls = []
+    
+    @config.colls.each do |v|
+      add_coll v
+    end
+    
+    @playlist = @xc.playlist(@name)
+  end
+#+end_src
+**** add and load collection
+    :PROPERTIES:
+    :ID:       509f71ad-9cff-4650-922b-1fa8819376ef
+    :END:
+#+srcname: playlist-coll
+#+begin_src ruby
+  def add_coll v
+    if v["expr"] then
+      coll=Xmms::Collection.parse(v["expr"])
+      load_coll(v["name"], coll, v["mult"])
+    else
+      @xc.coll_get(v["name"]) do |coll|
+        if(coll.is_a?(Xmms::Collection)) then
+          load_coll(v["name"], coll, v["mult"])
+        else
+          puts "Problem with collection #{v["name"]}"
+          puts "Please make sure it exists."
+          exit
+        end
+        true
+      end
+    end
+  end
+
+  def load_coll(name,coll,mult)
+    @xc.coll_query_ids(coll) do |ids_list|
+      if ids_list then
+        @colls.push({:name => name, :coll => coll, :mult => mult, :size => ids_list.length})
+      else
+        puts "Problem with collection #{name}"
+        puts "Please make sure it exists, or that its expression is correct"
+        exit
+      end
+      false
+    end
+  end
+#+end_src
+**** listening to change of the playlist
+    :PROPERTIES:
+    :ID:       32b563df-75f3-4a4f-8d03-bc7f33b04219
+    :END:
+#+srcname: playlist-listen
+#+begin_src ruby
+  def initialize_playlist
+    update_length
+    
+    @playlist.current_pos do |cur|
+      set_pos cur[:position] if cur[:name] == @name
+      true
+    end
+  end
+
+  def update_length
+    @playlist.entries do |entries|
+      set_length entries.length
+      true
+    end
+  end
+#+end_src
+**** Updating value when the playlist have changed
+    :PROPERTIES:
+    :ID:       cb233d2b-a517-46dc-8909-71fa38bcf358
+    :END:
+#+srcname: playlist-update
+#+begin_src ruby
+  def set_length new_length
+    debug "set_length #{new_length}"
+    @length = new_length
+    may_add_song
+  end
+
+  def set_pos new_pos
+    debug "set_pos #{new_pos}"
+    @pos = new_pos || 0
+    may_add_song
+    may_remove_song
+  end
+#+end_src
+**** Looking for the random song
+    :PROPERTIES:
+    :ID:       901d0cff-b8ea-4a0e-ab16-b065adba938c
+    :END:
+#+srcname: playlist-rand
+#+begin_src ruby
+  def rand_colls
+    # look for the total number
+    max = @colls.inject(0) do |acc,coll|
+      acc + coll[:mult] * coll[:size]
+    end
+    num = rand(max)
+    coll = @colls.find do |coll|
+      num = num - coll[:mult] * coll[:size]
+      num < 0
+    end
+    return coll
+  end
+
+  def rand_song(&block)
+    coll = rand_colls()
+    debug "song from #{coll[:name]}"
+    num = rand(coll[:size])
+    @xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
+  end
+#+end_src
+**** Adding a song when we must
+    :PROPERTIES:
+    :ID:       a93d522f-c63b-45bf-a37b-606c60fc7b8b
+    :END:
+#+srcname: playlist-add
+#+begin_src ruby
+  def may_add_song
+    debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
+    unless @adding or @length - @pos + 1 >= @config.upcoming
+      @adding = true
+      rand_song do |ids|
+        unless ids.empty?
+          debug "will add #{ids[0]}"
+          @playlist.add_entry(ids[0]) do |res|
+            debug "#{ids[0]} added"
+            @adding = false
+            true
+          end
+        else
+          @adding = false
+        end
+        true
+      end
+    end
+  end
+#+end_src
+**** removing a song when when must.
+    :PROPERTIES:
+    :ID:       30432074-3785-49f4-8b9b-68aed1070467
+    :END:
+#+srcname: playlist-remove
+#+begin_src ruby
+  def may_remove_song
+    if not @removing and @pos > @config.history then
+      debug "will remove"
+      @removing = true
+      @playlist.remove_entry(0) do |res|
+        debug "has removed"
+        @removing = false
+        may_remove_song       # pos is updated before deletion is confirmed,
+                              # so we have to check if the pos is still a problem
+        false
+      end
+    end
+  end
+#+end_src
+*** class Client
+    :PROPERTIES:
+    :ID:       0fef9129-376a-4b28-86a7-81709d141dc1
+    :END:
+#+srcname: client-class
+#+begin_src ruby
+  class Client
+    <<client-init>>
+    
+    <<client-config>>
+
+    <<client-config-again>>
+
+    <<client-run>>
+  end
+#+end_src
+**** def initialize
+   :PROPERTIES:
+   :ID:       3fd6e22d-edef-47a4-b6cd-96dea20555fd
+   :END:
+#+srcname: client-init
+#+begin_src ruby
+  def initialize
+    srand
+    begin
+      @xc = Xmms::Client::Async.new('WeightedShuffle').connect(ENV['XMMS_PATH'])
+    rescue Xmms::Client::ClientError
+      puts 'Failed to connect to XMMS2 daemon.'
+      puts 'Please make sure xmms2d is running and using the correct IPC path.'
+      exit
+    end
+    
+    @xc.on_disconnect do
+      exit(0)
+    end
+    
+    @xc.broadcast_quit do |res|
+      exit(0)
+    end
+    
+    @xc.add_to_glib_mainloop
+    @ml = GLib::MainLoop.new(nil, false)
+    
+    read_config()
+    
+    @xc.playback_status do |res|
+      # Here all stage 1 for colls are done
+      @xc.playback_status do |res|
+        # here all stage 2 for colls are done,
+        # and stage 3 will be done before the callback of the next command
+        @xc.broadcast_playlist_current_pos do |cur|
+          cur_list = @playlists[cur[:name]]
+          cur_list.set_pos(cur[:position]) if cur_list
+          true
+        end
+    
+        @xc.broadcast_playlist_changed do |cur|
+          cur_list = @playlists[cur[:name]]
+          cur_list.update_length if cur_list
+          true
+        end
+        true
+      end
+      true
+    end
+  end
+#+end_src
+**** Reading the configuration
+     :PROPERTIES:
+     :ID:       1b69f15d-0069-4d1a-bed1-844b002056e2
+     :END:
+#+srcname: client-config
+#+begin_src ruby
+  def read_config()
+    @config = Config.new()
+    @playlists = {}
+    @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
+    @xc.playback_status do |res|
+      #Here all stage 1 for colls are done
+      @xc.playback_status do |res|
+        #here all stage 2 for colls are done, and stage 3 will be done before the callback of the next command
+        @playlists.each do |n,list|
+          list.initialize_playlist
+          true
+        end
+        true
+      end
+      true
+    end
+  end
+#+end_src
+**** Reading the configuration again when it changed
+     :PROPERTIES:
+     :ID:       4ce166ba-678d-4d4c-900e-80f3b1f4e979
+     :END:
+#+srcname: client-config-again
+#+begin_src ruby
+  def may_reread_config()
+    read_config if @config.newer_conf?
+  end
+#+end_src
+**** Let run it
+     :PROPERTIES:
+     :ID:       9b3f38f9-5d50-452c-bb65-52cc44e08a40
+     :END:
+#+srcname: client-run
+#+begin_src ruby
+  def run()
+    @ml.run
+  end
+#+end_src
+*** Running it!
+     :PROPERTIES:
+     :ID:       c1039bf0-0534-4091-ac4a-bdbbca7bdd83
+     :END:
+#+srcname: running
+#+begin_src ruby
+  Client.new.run()
+#+end_src

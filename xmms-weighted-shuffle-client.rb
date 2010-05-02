@@ -1,17 +1,19 @@
-#!/usr/bin/ruby
-# a non interactive xmms client for weighted shuffle playlist
-# Copyright (c) 2010 Rémi Vanicat
+#!/usr/bin/env ruby
 
+# [[id:ac7f6246-329c-4319-8aa6-17663b999e5b][block-3]]
+
+# Copyright (c) 2010 Rémi Vanicat
+# 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
 # the rights to use, copy, modify, merge, publish, distribute, sublicense,
 # and/or sell copies of the Software, and to permit persons to whom the
 # Software is furnished to do so, subject to the following conditions:
-
+# 
 # The above copyright notice and this permission notice shall be included in
 # all copies or substantial portions of the Software.
-
+# 
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 # FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
@@ -19,12 +21,10 @@
 # OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-
+# 
 # Except as contained in this notice, the name of Rémi Vanicat shall not be
 # used in advertising or otherwise to promote the sale, use or other dealings
 # in this Software without prior written authorization from Rémi Vanicat.
-
-
 
 require 'glib2'
 require 'yaml'
@@ -33,21 +33,16 @@ require 'xmmsclient'
 require 'xmmsclient/async'
 require 'xmmsclient_glib'
 
-
-$0 = "xmms2-weighted-shuffle-client"
-
 def debug(*arg)
 #  puts(*arg)
 end
 
+$0 = "xmms2-weighted-shuffle-client"
+
 module WeightedShuffle
-
-  # {{{ class Config
   class Config
-
     CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
-
-    # {{{ Default Playlist Consts
+  
     DEFAULT_PLAYLIST_CONF = {
       "colls" => [
                   { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
@@ -60,20 +55,16 @@ module WeightedShuffle
       "history" => 3,
       "upcoming" => 18,
     }
-
+      
     DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
-    # }}}
-
-    # {{{ class Playlist
+  
     class Playlist
       attr_reader :conf, :colls, :name, :history, :upcoming
-
-
-      # {{{ def initialize
+      
       def initialize(name,playlist_conf)
         @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
         @conf["playlist"] ||= name
-
+        
         @colls = conf["colls"]
         debug("collections:\n #{colls.to_yaml}")
         @name = conf["playlist"]
@@ -83,11 +74,8 @@ module WeightedShuffle
         @upcoming = conf["upcoming"]
         debug("upcoming: #{upcoming}")
       end
-      # }}}
     end
-    # }}}
-
-    # {{{ def initialize
+  
     def initialize
       @mtime = File.mtime(CONF_PATH)
       begin
@@ -98,30 +86,26 @@ module WeightedShuffle
           YAML.dump(DEFAULT_CONF,out)
         end
       end
-
+      
       @playlists = { }
-
+      
       config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
     end
-    # }}}
-
+  
     def newer_conf?
       @mtime < File.mtime(CONF_PATH)
     end
-
+  
     def each(&body)
       @playlists.each(&body)
     end
-
+    
     def [] name
       @playlists[name]
     end
   end
-  # }}}
 
-  # {{{ class Playlists
   class Playlists
-    # {{{ def initialize(xc, config)
     def initialize(xc, config)
       @xc = xc
       @config = config
@@ -130,18 +114,16 @@ module WeightedShuffle
       @adding = false
       @removing = false
       @name = @config.name
-
+      
       @colls = []
-
+      
       @config.colls.each do |v|
         add_coll v
       end
-
+      
       @playlist = @xc.playlist(@name)
     end
-    # }}}
-
-    # {{{ def add_coll
+  
     def add_coll v
       if v["expr"] then
         coll=Xmms::Collection.parse(v["expr"])
@@ -159,9 +141,7 @@ module WeightedShuffle
         end
       end
     end
-    # }}}
-
-    # {{{ def load_coll
+    
     def load_coll(name,coll,mult)
       @xc.coll_query_ids(coll) do |ids_list|
         if ids_list then
@@ -174,46 +154,36 @@ module WeightedShuffle
         false
       end
     end
-    # }}}
-
-    # {{{ def initialize_playlist
+  
     def initialize_playlist
       update_length
-
+      
       @playlist.current_pos do |cur|
         set_pos cur[:position] if cur[:name] == @name
         true
       end
     end
-    # }}}
-
-    # {{{ def update_length
+    
     def update_length
       @playlist.entries do |entries|
         set_length entries.length
         true
       end
     end
-    # }}}
-
-    # {{{ def set_length
+  
     def set_length new_length
       debug "set_length #{new_length}"
       @length = new_length
       may_add_song
     end
-    # }}}
-
-    # {{{ def set_pos
+    
     def set_pos new_pos
       debug "set_pos #{new_pos}"
       @pos = new_pos || 0
       may_add_song
       may_remove_song
     end
-    # }}}
-
-    # {{{ def rand_colls
+  
     def rand_colls
       # look for the total number
       max = @colls.inject(0) do |acc,coll|
@@ -226,18 +196,14 @@ module WeightedShuffle
       end
       return coll
     end
-    # }}}
-
-    # {{{ def rand_song(&block)
+    
     def rand_song(&block)
       coll = rand_colls()
       debug "song from #{coll[:name]}"
       num = rand(coll[:size])
       @xc.coll_query_ids(coll[:coll], ["id"], num, 1, &block)
     end
-    # }}}
-
-    # {{{ def may_add_song
+  
     def may_add_song
       debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
       unless @adding or @length - @pos + 1 >= @config.upcoming
@@ -257,9 +223,7 @@ module WeightedShuffle
         end
       end
     end
-    # }}}
-
-    # {{{ def may_remove_song
+  
     def may_remove_song
       if not @removing and @pos > @config.history then
         debug "will remove"
@@ -273,13 +237,9 @@ module WeightedShuffle
         end
       end
     end
-    # }}}
   end
-  # }}}
 
-  # {{{ class Client
   class Client
-    # {{{ def initialize
     def initialize
       srand
       begin
@@ -289,20 +249,20 @@ module WeightedShuffle
         puts 'Please make sure xmms2d is running and using the correct IPC path.'
         exit
       end
-
+      
       @xc.on_disconnect do
         exit(0)
       end
-
+      
       @xc.broadcast_quit do |res|
         exit(0)
       end
-
+      
       @xc.add_to_glib_mainloop
       @ml = GLib::MainLoop.new(nil, false)
-
+      
       read_config()
-
+      
       @xc.playback_status do |res|
         # Here all stage 1 for colls are done
         @xc.playback_status do |res|
@@ -313,7 +273,7 @@ module WeightedShuffle
             cur_list.set_pos(cur[:position]) if cur_list
             true
           end
-
+      
           @xc.broadcast_playlist_changed do |cur|
             cur_list = @playlists[cur[:name]]
             cur_list.update_length if cur_list
@@ -324,9 +284,7 @@ module WeightedShuffle
         true
       end
     end
-    # }}}
-
-    # {{{ def read_config()
+    
     def read_config()
       @config = Config.new()
       @playlists = {}
@@ -344,20 +302,16 @@ module WeightedShuffle
         true
       end
     end
-    # }}}
-
+  
     def may_reread_config()
       read_config if @config.newer_conf?
     end
-
+  
     def run()
       @ml.run
     end
   end
-  # }}}
 
   Client.new.run()
 end
-
-#File layout controlled by Emacs folding.el available at:
-#Latest folding is available at http://cvs.xemacs.org/viewcvs.cgi/XEmacs/packages/xemacs-packages/text-modes/
+# block-3 ends here
