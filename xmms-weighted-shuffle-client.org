@@ -49,7 +49,7 @@
   (require 'org-babel-ruby)
 #+end_src
 
-  Extracting the code will be done by C-cM-bt
+  Extracting the code will be done by ~C-c M-bt~ or ~C-c C-v C-t~
 
   Reading http://orgmode.org/worg/org-contrib/babel/index.php could be a good idea.x
 
