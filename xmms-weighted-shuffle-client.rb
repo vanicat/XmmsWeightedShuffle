@@ -1,8 +1,5 @@
-#!/usr/bin/env ruby
 
-# [[id:ac7f6246-329c-4319-8aa6-17663b999e5b][block-3]]
-
-# Copyright (c) 2010 Rémi Vanicat
+# Copyright (c) 2010, 2011 Rémi Vanicat
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -159,7 +156,7 @@ module WeightedShuffle
       update_length
       
       @playlist.current_pos do |cur|
-        set_pos cur[:position] if cur[:name] == @name
+        set_pos cur[:position] if cur and cur[:name] == @name
         true
       end
     end
@@ -314,4 +311,3 @@ module WeightedShuffle
 
   Client.new.run()
 end
-# block-3 ends here
