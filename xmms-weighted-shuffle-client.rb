@@ -1,3 +1,4 @@
+#!/usr/bin/ruby
 
 # Copyright (c) 2010, 2011 Rémi Vanicat
 # 
