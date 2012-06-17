@@ -60,7 +60,7 @@
   :ID:       ac7f6246-329c-4319-8aa6-17663b999e5b
   :END:
 
-#+begin_src ruby :shebang #!/usr/bin/ruby :tangle xmms-weighted-shuffle-client.rb
+#+begin_src ruby :shebang #!/usr/bin/ruby :tangle xmms-weighted-shuffle-client
   # <<licence>>
 
   <<header>>
