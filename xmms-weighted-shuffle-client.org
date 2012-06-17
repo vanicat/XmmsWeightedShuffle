@@ -8,8 +8,8 @@
    :PROPERTIES:
    :ID:       7ae19bd1-834b-4964-9ef8-1392b478c820
    :END:
-#+srcname: licence
-#+begin_src ruby
+#+name: licence
+#+begin_src text
   Copyright (c) 2010, 2011, 2012 Rémi Vanicat
   
   Permission is hereby granted, free of charge, to any person obtaining a
@@ -73,7 +73,7 @@
    :ID:       5c7c91f4-0ce4-4a8d-af36-bdbbc0265763
    :END:
    The much required libraries, a debuging function, and setting the name of the executable
-#+srcname: header
+#+name: header
 #+begin_src ruby
   require 'glib2'
   require 'yaml'
@@ -92,7 +92,7 @@
    :PROPERTIES:
    :ID:       c1374ab1-8d65-45c1-9157-c73558668660
    :END:
-#+srcname: weightedshuffle-module
+#+name: weightedshuffle-module
 #+begin_src ruby
   module WeightedShuffle
     <<config-class>>
@@ -108,7 +108,7 @@
    :PROPERTIES:
    :ID:       55a139ea-8380-4a01-b10b-22a54ffdfab4
    :END:
-#+srcname: config-class
+#+name: config-class
 #+begin_src ruby
   class Config
     CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
@@ -128,7 +128,7 @@
     :PROPERTIES:
     :ID:       8bbf68f3-5d6a-4450-b3d6-c1da788b01ab
     :END:
-#+srcname: default-playlist-conf
+#+name: default-playlist-conf
 #+begin_src ruby
   DEFAULT_PLAYLIST_CONF = {
     "colls" => [
@@ -149,7 +149,7 @@
     :PROPERTIES:
     :ID:       0120e590-43cd-4c6d-922c-006decdd54db
     :END:
-#+srcname: playlist-config-class
+#+name: playlist-config-class
 #+begin_src ruby :exports none
   class Playlist
     attr_reader :conf, :colls, :name, :history, :upcoming
@@ -161,7 +161,7 @@
      :PROPERTIES:
      :ID:       b8c95d54-dccf-4181-8a33-935331cda213
      :END:
-#+srcname: initialize-playlist-config
+#+name: initialize-playlist-config
 #+begin_src ruby
   def initialize(name,playlist_conf)
     @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
@@ -181,7 +181,7 @@
     :PROPERTIES:
     :ID:       4339e85c-8b5d-42db-a430-53b49156bdb3
     :END:
-#+srcname: config-initialize
+#+name: config-initialize
 #+begin_src ruby
   def initialize
     @mtime = File.mtime(CONF_PATH)
@@ -203,7 +203,7 @@
      :PROPERTIES:
      :ID:       9efd8222-f146-4a7b-afd4-878fdffb8810
      :END:
-#+srcname: config-is-newer
+#+name: config-is-newer
 #+begin_src ruby
   def newer_conf?
     @mtime < File.mtime(CONF_PATH)
@@ -213,7 +213,7 @@
      :PROPERTIES:
      :ID:       63a8e11c-5752-46ec-89c4-04a60f54768f
      :END:
-#+srcname: config-is-a-hash
+#+name: config-is-a-hash
 #+begin_src ruby
   def each(&body)
     @playlists.each(&body)
@@ -229,7 +229,7 @@
    :PROPERTIES:
    :ID:       1158ccc9-48a0-48fe-9e83-389238a620bc
    :END:
-#+srcname: playlists-class
+#+name: playlists-class
 #+begin_src ruby
   class Playlists
     <<playlist-init>>
@@ -251,7 +251,7 @@
     :PROPERTIES:
     :ID:       d9aeb0e3-0fcc-43cf-a784-d6a2dc8ec459
     :END:
-#+srcname: playlist-init
+#+name: playlist-init
 #+begin_src ruby
   def initialize(xc, config)
     @xc = xc
@@ -275,7 +275,7 @@
     :PROPERTIES:
     :ID:       509f71ad-9cff-4650-922b-1fa8819376ef
     :END:
-#+srcname: playlist-coll
+#+name: playlist-coll
 #+begin_src ruby
   def add_coll v
     if v["expr"] then
@@ -312,7 +312,7 @@
     :PROPERTIES:
     :ID:       32b563df-75f3-4a4f-8d03-bc7f33b04219
     :END:
-#+srcname: playlist-listen
+#+name: playlist-listen
 #+begin_src ruby
   def initialize_playlist
     update_length
@@ -334,7 +334,7 @@
     :PROPERTIES:
     :ID:       cb233d2b-a517-46dc-8909-71fa38bcf358
     :END:
-#+srcname: playlist-update
+#+name: playlist-update
 #+begin_src ruby
   def set_length new_length
     debug "set_length #{new_length}"
@@ -353,7 +353,7 @@
     :PROPERTIES:
     :ID:       901d0cff-b8ea-4a0e-ab16-b065adba938c
     :END:
-#+srcname: playlist-rand
+#+name: playlist-rand
 #+begin_src ruby
   def rand_colls
     # look for the total number
@@ -379,7 +379,7 @@
     :PROPERTIES:
     :ID:       a93d522f-c63b-45bf-a37b-606c60fc7b8b
     :END:
-#+srcname: playlist-add
+#+name: playlist-add
 #+begin_src ruby
   def may_add_song
     debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
@@ -405,7 +405,7 @@
     :PROPERTIES:
     :ID:       30432074-3785-49f4-8b9b-68aed1070467
     :END:
-#+srcname: playlist-remove
+#+name: playlist-remove
 #+begin_src ruby
   def may_remove_song
     if not @removing and @pos > @config.history then
@@ -425,7 +425,7 @@
     :PROPERTIES:
     :ID:       0fef9129-376a-4b28-86a7-81709d141dc1
     :END:
-#+srcname: client-class
+#+name: client-class
 #+begin_src ruby
   class Client
     <<client-init>>
@@ -441,7 +441,7 @@
    :PROPERTIES:
    :ID:       3fd6e22d-edef-47a4-b6cd-96dea20555fd
    :END:
-#+srcname: client-init
+#+name: client-init
 #+begin_src ruby
   def initialize
     srand
@@ -492,7 +492,7 @@
      :PROPERTIES:
      :ID:       1b69f15d-0069-4d1a-bed1-844b002056e2
      :END:
-#+srcname: client-config
+#+name: client-config
 #+begin_src ruby
   def read_config()
     @config = Config.new()
@@ -516,7 +516,7 @@
      :PROPERTIES:
      :ID:       4ce166ba-678d-4d4c-900e-80f3b1f4e979
      :END:
-#+srcname: client-config-again
+#+name: client-config-again
 #+begin_src ruby
   def may_reread_config()
     read_config if @config.newer_conf?
@@ -526,7 +526,7 @@
      :PROPERTIES:
      :ID:       9b3f38f9-5d50-452c-bb65-52cc44e08a40
      :END:
-#+srcname: client-run
+#+name: client-run
 #+begin_src ruby
   def run()
     @ml.run
@@ -536,7 +536,7 @@
      :PROPERTIES:
      :ID:       c1039bf0-0534-4091-ac4a-bdbbca7bdd83
      :END:
-#+srcname: running
+#+name: running
 #+begin_src ruby
   Client.new.run()
 #+end_src
