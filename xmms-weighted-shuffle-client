@@ -23,7 +23,6 @@
 # Except as contained in this notice, the name of Rémi Vanicat shall not be
 # used in advertising or otherwise to promote the sale, use or other dealings
 # in this Software without prior written authorization from Rémi Vanicat.
-# 
 
 require 'glib2'
 require 'yaml'
@@ -54,16 +53,16 @@ module WeightedShuffle
       "history" => 3,
       "upcoming" => 18,
     }
-      
+    
     DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
   
     class Playlist
       attr_reader :conf, :colls, :name, :history, :upcoming
-      
+    
       def initialize(name,playlist_conf)
         @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
         @conf["playlist"] ||= name
-        
+      
         @colls = conf["colls"]
         debug("collections:\n #{colls.to_yaml}")
         @name = conf["playlist"]
@@ -85,9 +84,9 @@ module WeightedShuffle
           YAML.dump(DEFAULT_CONF,out)
         end
       end
-      
+    
       @playlists = { }
-      
+    
       config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
     end
   
@@ -113,13 +112,13 @@ module WeightedShuffle
       @adding = false
       @removing = false
       @name = @config.name
-      
+    
       @colls = []
-      
+    
       @config.colls.each do |v|
         add_coll v
       end
-      
+    
       @playlist = @xc.playlist(@name)
     end
   
@@ -156,7 +155,7 @@ module WeightedShuffle
   
     def initialize_playlist
       update_length
-      
+    
       @playlist.current_pos do |cur|
         set_pos cur[:position] if cur and cur[:name] == @name
         true
@@ -248,20 +247,20 @@ module WeightedShuffle
         puts 'Please make sure xmms2d is running and using the correct IPC path.'
         exit
       end
-      
+    
       @xc.on_disconnect do
         exit(0)
       end
-      
+    
       @xc.broadcast_quit do |res|
         exit(0)
       end
-      
+    
       @xc.add_to_glib_mainloop
       @ml = GLib::MainLoop.new(nil, false)
-      
+    
       read_config()
-      
+    
       @xc.playback_status do |res|
         # Here all stage 1 for colls are done
         @xc.playback_status do |res|
@@ -272,7 +271,7 @@ module WeightedShuffle
             cur_list.set_pos(cur[:position]) if cur_list
             true
           end
-      
+    
           @xc.broadcast_playlist_changed do |cur|
             cur_list = @playlists[cur[:name]]
             cur_list.update_length if cur_list
@@ -283,7 +282,7 @@ module WeightedShuffle
         true
       end
     end
-    
+  
     def read_config()
       @config = Config.new()
       @playlists = {}

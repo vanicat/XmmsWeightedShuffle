@@ -11,17 +11,17 @@
 #+name: licence
 #+begin_src text
   Copyright (c) 2010, 2011, 2012 Rémi Vanicat
-  
+
   Permission is hereby granted, free of charge, to any person obtaining a
   copy of this software and associated documentation files (the "Software"),
   to deal in the Software without restriction, including without limitation
   the rights to use, copy, modify, merge, publish, distribute, sublicense,
   and/or sell copies of the Software, and to permit persons to whom the
   Software is furnished to do so, subject to the following conditions:
-  
+
   The above copyright notice and this permission notice shall be included in
   all copies or substantial portions of the Software.
-  
+
   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
@@ -29,11 +29,10 @@
   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
   OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
   THE SOFTWARE.
-  
+
   Except as contained in this notice, the name of Rémi Vanicat shall not be
   used in advertising or otherwise to promote the sale, use or other dealings
   in this Software without prior written authorization from Rémi Vanicat.
-  
 #+end_src
 ** Literate programming and org-mode
    :PROPERTIES:
@@ -43,16 +42,16 @@
    code is between the '#+begin_src ruby' and '#+end_src', with Emacs, org-mode
    and org-babel, C-c ' will put you in a buffer with the correct mode for
    editing the snippet your are in.
-   
+
    You will need to add the following to your .emacs:
 #+begin_src emacs-lisp
   (require 'org-babel-init)
   (require 'org-babel-ruby)
 #+end_src
 
-  Extracting the code will be done by ~C-c M-bt~ or ~C-c C-v C-t~
+  Extracting the code will be done by ~C-c C-v C-t~
 
-  Reading http://orgmode.org/worg/org-contrib/babel/index.php could be a good idea.x
+  Reading http://orgmode.org/worg/org-contrib/babel/index.php could be a good idea.
 
 * The code
   :PROPERTIES:
@@ -77,11 +76,11 @@
 #+begin_src ruby
   require 'glib2'
   require 'yaml'
-  
+
   require 'xmmsclient'
   require 'xmmsclient/async'
   require 'xmmsclient_glib'
-  
+
   def debug(*arg)
   #  puts(*arg)
   end
@@ -96,9 +95,9 @@
 #+begin_src ruby
   module WeightedShuffle
     <<config-class>>
-  
+
     <<playlists-class>>
-  
+
     <<client-class>>
 
     <<running>>
@@ -112,15 +111,15 @@
 #+begin_src ruby
   class Config
     CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
-  
+
     <<default-playlist-conf>>
-  
+
     <<playlist-config-class>>
-  
+
     <<config-initialize>>
-  
+
     <<config-is-newer>>
-  
+
     <<config-is-a-hash>>
   end
 #+end_src
@@ -142,7 +141,7 @@
     "history" => 3,
     "upcoming" => 18,
   }
-    
+
   DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
 #+end_src
 **** class Playlist
@@ -153,7 +152,7 @@
 #+begin_src ruby :exports none
   class Playlist
     attr_reader :conf, :colls, :name, :history, :upcoming
-    
+
     <<initialize-playlist-config>>
   end
 #+end_src
@@ -166,7 +165,7 @@
   def initialize(name,playlist_conf)
     @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
     @conf["playlist"] ||= name
-    
+
     @colls = conf["colls"]
     debug("collections:\n #{colls.to_yaml}")
     @name = conf["playlist"]
@@ -193,9 +192,9 @@
         YAML.dump(DEFAULT_CONF,out)
       end
     end
-    
+
     @playlists = { }
-    
+
     config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
   end
 #+end_src
@@ -218,7 +217,7 @@
   def each(&body)
     @playlists.each(&body)
   end
-  
+
   def [] name
     @playlists[name]
   end
@@ -261,13 +260,13 @@
     @adding = false
     @removing = false
     @name = @config.name
-    
+
     @colls = []
-    
+
     @config.colls.each do |v|
       add_coll v
     end
-    
+
     @playlist = @xc.playlist(@name)
   end
 #+end_src
@@ -316,7 +315,7 @@
 #+begin_src ruby
   def initialize_playlist
     update_length
-    
+
     @playlist.current_pos do |cur|
       set_pos cur[:position] if cur and cur[:name] == @name
       true
@@ -429,7 +428,7 @@
 #+begin_src ruby
   class Client
     <<client-init>>
-    
+
     <<client-config>>
 
     <<client-config-again>>
@@ -452,20 +451,20 @@
       puts 'Please make sure xmms2d is running and using the correct IPC path.'
       exit
     end
-    
+
     @xc.on_disconnect do
       exit(0)
     end
-    
+
     @xc.broadcast_quit do |res|
       exit(0)
     end
-    
+
     @xc.add_to_glib_mainloop
     @ml = GLib::MainLoop.new(nil, false)
-    
+
     read_config()
-    
+
     @xc.playback_status do |res|
       # Here all stage 1 for colls are done
       @xc.playback_status do |res|
@@ -476,7 +475,7 @@
           cur_list.set_pos(cur[:position]) if cur_list
           true
         end
-    
+
         @xc.broadcast_playlist_changed do |cur|
           cur_list = @playlists[cur[:name]]
           cur_list.update_length if cur_list
