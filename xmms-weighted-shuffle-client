@@ -44,6 +44,10 @@ def debug(*arg)
   #  puts(*arg)
 end
 
+def deprecated(arg)
+  warn(Kernel.caller[1]+" "+arg)
+end
+
 $0 = "xmms2-weighted-shuffle-client"
 
 ### The main module
