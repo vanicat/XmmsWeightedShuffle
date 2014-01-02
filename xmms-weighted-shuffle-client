@@ -70,23 +70,16 @@ module WeightedShuffle
 
     DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
 
+    def read_one_playlist_conf(name,playlist_conf)
+      conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
+      conf["playlist"] ||= name
 
-    class Playlist
-      attr_reader :conf, :colls, :name, :history, :upcoming
+      debug("collections:\n #{conf["colls"].to_yaml}")
+      debug("playlist: #{conf["playlist"]}")
+      debug("history: #{conf["history"]}")
+      debug("upcoming: #{conf["upcoming"]}")
 
-      def initialize(name,playlist_conf)
-        @conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
-        @conf["playlist"] ||= name
-
-        @colls = conf["colls"]
-        debug("collections:\n #{colls.to_yaml}")
-        @name = conf["playlist"]
-        debug("playlist: #{name}")
-        @history = conf["history"]
-        debug("history: #{history}")
-        @upcoming = conf["upcoming"]
-        debug("upcoming: #{upcoming}")
-      end
+      return conf
     end
 
     def initialize
@@ -102,7 +95,7 @@ module WeightedShuffle
 
       @playlists = { }
 
-      config_file.each_pair { |name,config| @playlists[name] = Playlist.new(name, config) }
+      config_file.each_pair { |name,config| @playlists[name] = read_one_playlist_conf(name, config) }
     end
 
     def newer_conf?
@@ -126,11 +119,11 @@ module WeightedShuffle
       @length = 0
       @adding = false
       @removing = false
-      @name = @config.name
+      @name = @config["playlist"]
 
       @colls = []
 
-      @config.colls.each do |v|
+      @config["colls"].each do |v|
         add_coll v
       end
 
@@ -219,7 +212,7 @@ module WeightedShuffle
 
     def may_add_song
       debug "adding: #{@adding}, cur pos: #{@pos}, cur length: #{@length}"
-      unless @adding or @length - @pos + 1 >= @config.upcoming
+      unless @adding or @length - @pos + 1 >= @config["upcoming"]
         @adding = true
         rand_song do |ids|
           unless ids.empty?
@@ -238,7 +231,7 @@ module WeightedShuffle
     end
 
     def may_remove_song
-      if not @removing and @pos > @config.history then
+      if not @removing and @pos > @config["history"] then
         debug "will remove"
         @removing = true
         @playlist.remove_entry(0) do |res|
@@ -302,7 +295,7 @@ module WeightedShuffle
     def read_config()
       @config = Config.new()
       @playlists = {}
-      @config.each { |id,conf| @playlists[ conf.name ] = Playlists.new(@xc, conf) }
+      @config.each { |id,conf| @playlists[ conf["playlist"] ] = Playlists.new(@xc, conf) }
       @xc.playback_status do |res|
         #Here all stage 1 for colls are done
         @xc.playback_status do |res|
