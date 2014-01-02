@@ -52,58 +52,49 @@ $0 = "xmms2-weighted-shuffle-client"
 
 ### The main module
 module WeightedShuffle
-  class Config
-    CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
+  CONF_PATH = Xmms.userconfdir + "/clients/WeightedShuffle.yaml"
 
-    DEFAULT_PLAYLIST_CONF = {
-      "colls" => [
-                  { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
-                  { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
-                  { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
-                  { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
-                  { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
-                  { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
-                 ],
-      "history" => 3,
-      "upcoming" => 18,
-    }
+  DEFAULT_PLAYLIST_CONF = {
+    "colls" => [
+                { "name" => "1-rated", "expr" => "rating:*1", "mult" => 1 },
+                { "name" => "2-rated", "expr" => "rating:*2", "mult" => 2 },
+                { "name" => "3-rated", "expr" => "rating:*3", "mult" => 3 },
+                { "name" => "4-rated", "expr" => "rating:*4", "mult" => 4 },
+                { "name" => "5-rated", "expr" => "rating:*5", "mult" => 5 },
+                { "name" => "not-rated", "expr" => "NOT +rating", "mult" => 2 }
+               ],
+    "history" => 3,
+    "upcoming" => 18,
+  }
 
-    DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
+  DEFAULT_PLAYLIST_NAME = "weighted_shuffee_playlist"
 
-    def read_one_playlist_conf(name,playlist_conf)
-      conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
-      conf["playlist"] ||= name
+  def self.read_one_playlist_conf(name,playlist_conf)
+    conf = DEFAULT_PLAYLIST_CONF.merge(playlist_conf)
+    conf["playlist"] ||= name
 
-      debug("collections:\n #{conf["colls"].to_yaml}")
-      debug("playlist: #{conf["playlist"]}")
-      debug("history: #{conf["history"]}")
-      debug("upcoming: #{conf["upcoming"]}")
+    debug("collections:\n #{conf["colls"].to_yaml}")
+    debug("playlist: #{conf["playlist"]}")
+    debug("history: #{conf["history"]}")
+    debug("upcoming: #{conf["upcoming"]}")
 
-      return conf
-    end
+    return conf
+  end
 
-    def initialize
-      begin
-        config_file=YAML.load_file(CONF_PATH)
-      rescue Errno::ENOENT => x
-        config_file={ DEFAULT_PLAYLIST_NAME => DEFAULT_PLAYLIST_CONF }
-        File.open(CONF_PATH, 'w') do |out|
-          YAML.dump(DEFAULT_CONF,out)
-        end
+  def self.read_all_playlists_conf()
+    begin
+      config_file=YAML.load_file(CONF_PATH)
+    rescue Errno::ENOENT => x
+      config_file={ DEFAULT_PLAYLIST_NAME => DEFAULT_PLAYLIST_CONF }
+      File.open(CONF_PATH, 'w') do |out|
+        YAML.dump(DEFAULT_CONF,out)
       end
-
-      @playlists = { }
-
-      config_file.each_pair { |name,config| @playlists[name] = read_one_playlist_conf(name, config) }
     end
 
-    def each(&body)
-      @playlists.each(&body)
-    end
+    playlists = { }
 
-    def [] name
-      @playlists[name]
-    end
+    config_file.each_pair { |name,config| playlists[name] = read_one_playlist_conf(name, config) }
+    return playlists
   end
 
   class Playlists
@@ -288,7 +279,7 @@ module WeightedShuffle
     end
 
     def read_config()
-      @config = Config.new()
+      @config = WeightedShuffle::read_all_playlists_conf()
       @playlists = {}
       @config.each { |id,conf| @playlists[ conf["playlist"] ] = Playlists.new(@xc, conf) }
       @xc.playback_status do |res|
