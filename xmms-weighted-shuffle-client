@@ -68,7 +68,6 @@ module WeightedShuffle
 
 
     class Playlist
-      #   In charge to add and remove song from the xmms Playlists
       attr_reader :conf, :colls, :name, :history, :upcoming
 
       def initialize(name,playlist_conf)
